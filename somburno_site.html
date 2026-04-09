@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOMBURNO — тест сна и эмоционального состояния</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-deep: #150f35;
+      --bg-mid: #25185b;
+      --bg-soft: #34207a;
+      --glass: rgba(255,255,255,0.12);
+      --glass-2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.16);
+      --text: #f7f8ff;
+      --muted: #dde1ff;
+      --good: #32c481;
+      --warn: #ffbf47;
+      --bad: #ff6b6b;
+      --accent1: #67d7ff;
+      --accent2: #8a7dff;
+      --accent3: #ff7ad9;
+      --shadow: 0 22px 60px rgba(9, 7, 26, 0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --font: Arial, Helvetica, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, rgba(103,215,255,0.28), transparent 24%),
+        radial-gradient(circle at 92% 12%, rgba(255,122,217,0.24), transparent 22%),
+        radial-gradient(circle at 50% 85%, rgba(138,125,255,0.24), transparent 28%),
+        linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-mid) 44%, var(--bg-soft) 100%);
+      min-height: 100vh;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.45;
+    }
+
+    body::before {
+      top: -120px;
+      left: -120px;
+      background: rgba(103,215,255,0.28);
+    }
+
+    body::after {
+      right: -120px;
+      bottom: -120px;
+      background: rgba(255,122,217,0.24);
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    .hero,
+    .panel,
+    .result-card,
+    .mini-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.08));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: var(--radius-xl);
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      margin-bottom: 24px;
+    }
+
+    .hero {
+      padding: 28px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -40px;
+      bottom: -60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .mini-wrap {
+      display: grid;
+      gap: 16px;
+    }
+
+    .mini-card {
+      padding: 18px;
+      border-radius: 22px;
+    }
+
+    .mini-card .kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      color: #e7ecff;
+    }
+
+    .mini-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .mini-card .desc {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel { padding: 22px; margin-bottom: 22px; }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .panel h2, .panel h3 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .badge {
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .patient-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field { display: grid; gap: 8px; }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f5f7ff;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      padding: 14px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.10);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder { color: rgba(255,255,255,0.62); }
+
+    .field input:focus,
+    .field textarea:focus {
+      border-color: rgba(103,215,255,0.8);
+      box-shadow: 0 0 0 4px rgba(103,215,255,0.14);
+    }
+
+    .field small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .block-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 24px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .block-card:last-child { margin-bottom: 0; }
+
+    .block-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .block-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .block-note {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .question {
+      padding: 16px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .question:last-child { margin-bottom: 0; }
+
+    .question-title {
+      font-size: 16px;
+      line-height: 1.55;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .option-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 88px;
+      height: 100%;
+      padding: 14px 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .option-card:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.24);
+    }
+
+    .option-score {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .option-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #f8f9ff;
+    }
+
+    .option input:checked + .option-card {
+      background: linear-gradient(135deg, rgba(103,215,255,0.30), rgba(138,125,255,0.28), rgba(255,122,217,0.24));
+      border-color: rgba(255,255,255,0.52);
+      box-shadow: 0 12px 28px rgba(15, 12, 44, 0.32);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .btn {
+      padding: 13px 16px;
+      border-radius: 15px;
+      font-weight: 700;
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent3));
+      color: #fff;
+      box-shadow: 0 12px 28px rgba(95, 76, 196, 0.34);
+    }
+
+    .btn-secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .sticky {
+      position: sticky;
+      top: 18px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .result-card {
+      padding: 22px;
+    }
+
+    .result-card h3 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+
+    .lead {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .hero-score {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.12);
+      margin-bottom: 18px;
+    }
+
+    .score-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--accent1) 0deg, var(--accent2) 0deg, rgba(255,255,255,0.10) 0deg 360deg);
+      position: relative;
+    }
+
+    .score-circle::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1d1a45, #2b2261);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .score-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .score-content .num {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .score-content .den {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hero-summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.10);
+    }
+
+    .status-good { color: #d9ffe9; background: rgba(50,196,129,0.18); }
+    .status-warn { color: #fff2d1; background: rgba(255,191,71,0.18); }
+    .status-bad { color: #ffe0e0; background: rgba(255,107,107,0.18); }
+
+    .summary-text {
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .blocks-list {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .block-result {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .row-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .name {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .score {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .meter {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.10);
+      margin-bottom: 10px;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--good), var(--warn), var(--bad));
+      transition: width .25s ease;
+    }
+
+    .micro {
+      color: #f4f6ff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .chip {
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 12px;
+      color: #eef3ff;
+    }
+
+    .small-title {
+      margin: 0 0 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .recommendations {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rec-item {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .rec-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.12);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .rec-text {
+      font-size: 14px;
+      line-height: 1.58;
+      color: #f7f8ff;
+    }
+
+    .pdf-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .pdf-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .hidden-report {
+      position: absolute;
+      left: -99999px;
+      top: 0;
+      width: 794px;
+      background: #ffffff;
+      color: #1a1a1a;
+      padding: 34px 34px 28px;
+      font-family: Arial, Helvetica, sans-serif;
+      box-sizing: border-box;
+    }
+
+    .pdf-page-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: #2c2b6f;
+    }
+
+    .pdf-subtitle {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #555;
+      margin: 0 0 18px;
+    }
+
+    .pdf-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+
+    .pdf-box {
+      border: 1px solid #d8dcf2;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      background: #fafbff;
+    }
+
+    .pdf-box h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #2c2b6f;
+    }
+
+    .pdf-list { margin: 0; padding-left: 18px; }
+    .pdf-list li { margin-bottom: 6px; line-height: 1.5; font-size: 13px; }
+    .pdf-block-grid { display: grid; gap: 10px; }
+    .pdf-block-item {
+      border: 1px solid #e2e5f5;
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+    .pdf-block-item strong { color: #2c2b6f; }
+
+    @media (max-width: 1180px) {
+      .top, .layout { grid-template-columns: 1fr; }
+      .sticky { position: static; }
+    }
+
+    @media (max-width: 900px) {
+      .options, .patient-grid { grid-template-columns: 1fr 1fr; }
+      .hero-score { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+      .hero-summary { justify-items: center; }
+    }
+
+    @media (max-width: 640px) {
+      .shell { padding: 16px 10px 32px; }
+      .hero, .panel, .result-card, .mini-card { padding: 16px; }
+      .options, .patient-grid { grid-template-columns: 1fr; }
+      .panel-header, .block-title-row, .row-flex { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .shell { max-width: 100%; padding: 0; }
+      .hero, .panel, .result-card, .mini-card, .block-card, .question {
+        background: #fff;
+        color: #000;
+        box-shadow: none;
+        border: 1px solid #ddd;
+      }
+      .btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="top">
+      <div class="hero">
+        <div class="eyebrow">SOMBURNO • онлайн-тест</div>
+        <h1>Опросник «SOMBURNO — сон и эмоциональное состояние»</h1>
+        <p>
+          Отвечайте на вопросы, ориентируясь на ваше обычное состояние за последний месяц.
+          Для каждого пункта выберите один вариант ответа. Результат пересчитывается автоматически:
+          сразу после выбора ответов вы увидите общий итог, показатели по блокам и рекомендации.
+        </p>
+      </div>
+      <div class="mini-wrap">
+        <div class="mini-card">
+          <div class="kicker">Как проходить</div>
+          <div class="value">1 ответ</div>
+          <div class="desc">На каждый вопрос выбирается только один вариант. Чем выше сумма баллов, тем больше выражены нарушения.</div>
+        </div>
+        <div class="mini-card">
+          <div class="kicker">Структура</div>
+          <div class="value">24 вопроса</div>
+          <div class="desc">Тест оценивает качество сна, дневную сонливость, эмоционально окрашенные сновидения и физиологические проявления во сне.</div>
+        </div>
+        <div class="mini-card">
+          <div class="kicker">Результат</div>
+          <div class="value">Сразу</div>
+          <div class="desc">Итог появляется автоматически. Его можно сохранить в PDF вместе с ФИО, датой рождения и кратким комментарием.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <main>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Данные пользователя</h2>
+              <div class="sub">Эти поля нужны только для личного отчёта и PDF-файла.</div>
+            </div>
+            <div class="badge">Период оценки: последний месяц</div>
+          </div>
+          <div class="patient-grid">
+            <div class="field">
+              <label for="fio">Фамилия, имя, отчество</label>
+              <input id="fio" type="text" placeholder="Введите ФИО" />
+            </div>
+            <div class="field">
+              <label for="birthDate">Дата рождения</label>
+              <input id="birthDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="age">Возраст</label>
+              <input id="age" type="text" placeholder="Рассчитывается автоматически" readonly />
+            </div>
+            <div class="field">
+              <label for="comment">Комментарий</label>
+              <input id="comment" type="text" placeholder="Например: первичное прохождение" />
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Вопросы теста</h2>
+              <div class="sub">Нажимайте на нужный вариант ответа. Результат справа обновляется автоматически без дополнительных кнопок.</div>
+            </div>
+            <div class="badge" id="progressBadge">Заполнено: 0 / 24</div>
+          </div>
+          <div id="questionnaire"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="pdfBtn" type="button">Скачать результат в PDF</button>
+            <button class="btn btn-secondary" id="resetBtn" type="button">Сбросить ответы</button>
+          </div>
+        </section>
+      </main>
+
+      <aside class="sticky">
+        <section class="result-card" id="resultArea">
+          <h3>Ваш результат</h3>
+          <p class="lead">После заполнения теста здесь автоматически появятся общий профиль, оценка по каждому блоку и рекомендации.</p>
+
+          <div class="hero-score">
+            <div class="score-circle" id="scoreCircle">
+              <div class="score-content">
+                <div class="num" id="totalScore">0</div>
+                <div class="den">из 72</div>
+              </div>
+            </div>
+            <div class="hero-summary">
+              <div class="status-pill status-good" id="overallPill">Хороший профиль</div>
+              <div class="summary-text" id="overallText">
+                Пока тест заполнен не полностью. Выберите ответы на вопросы, и результат появится автоматически.
+              </div>
+              <div class="chips" id="signalChips"></div>
+            </div>
+          </div>
+
+          <div class="blocks-list" id="blockResults"></div>
+
+          <div>
+            <div class="small-title">Рекомендации</div>
+            <div class="recommendations" id="recommendations"></div>
+          </div>
+        </section>
+
+        <section class="pdf-card">
+          <div class="small-title">PDF-выгрузка</div>
+          <p>
+            В PDF будут включены ФИО, дата рождения, возраст, комментарий, общий итог,
+            показатели по блокам и текстовые рекомендации.
+          </p>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div class="hidden-report" id="pdfReport"></div>
+
+  <script>
+    const questionnaireData = [
+      {
+        id: 'block1',
+        title: 'Блок 1. Качество сна',
+        max: 24,
+        hint: 'Оцените ваш сон в целом: засыпание, продолжительность, ночные пробуждения, стабильность режима и влияние сна на дневную активность.',
+        questions: [
+          { text: 'Как вы оцениваете общее качество вашего сна?', labels: ['0 — очень хорошее', '1 — скорее хорошее', '2 — скорее плохое', '3 — очень плохое'] },
+          { text: 'Сколько минут в среднем вы засыпаете после того, как легли спать?', labels: ['0 — меньше 15 мин', '1 — 16–30 мин', '2 — 31–60 мин', '3 — больше 60 мин'] },
+          { text: 'Сколько часов сна у вас обычно за ночь?', labels: ['0 — больше 7 ч', '1 — 6–7 ч', '2 — 5–6 ч', '3 — меньше 5 ч'] },
+          { text: 'Оцените эффективность сна (отношение сна ко времени в постели).', labels: ['0 — больше 85 %', '1 — 75–84 %', '2 — 65–74 %', '3 — меньше 65 %'] },
+          { text: 'Как часто вы испытывали ночные пробуждения или другие нарушения сна (шум, боль, позывы и т. д.)?', labels: ['0 — никогда', '1 — менее 1 раза в неделю', '2 — 1–2 раза в неделю', '3 — более 3 раз в неделю'] },
+          { text: 'Принимали ли вы лекарства для сна?', labels: ['0 — никогда', '1 — менее 1 раза в неделю', '2 — 1–2 раза в неделю', '3 — более 3 раз в неделю'] },
+          { text: 'Насколько ваш сон мешал вашей дневной активности (усталость, внимание, настроение)?', labels: ['0 — не мешал', '1 — немного', '2 — значительно', '3 — очень сильно'] },
+          { text: 'Насколько стабилен ваш режим сна (время отхода и подъёма)?', labels: ['0 — всегда стабилен', '1 — обычно стабилен', '2 — иногда меняется', '3 — часто меняется'] }
+        ]
+      },
+      {
+        id: 'block2',
+        title: 'Блок 2. Дневная сонливость',
+        max: 24,
+        hint: 'Оцените вероятность задремать в типичных повседневных ситуациях.',
+        questions: [
+          { text: 'Чтение сидя', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Просмотр телевизора', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Сидение в общественном месте (лекция, собрание, кино)', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Поездка пассажиром в машине не менее 1 часа', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Дневной отдых лёжа', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Беседа сидя', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Послеобеденное время без алкоголя', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] },
+          { text: 'Вождение или ожидание в пробке', labels: ['0 — никогда', '1 — малая', '2 — умеренная', '3 — высокая'] }
+        ]
+      },
+      {
+        id: 'block3',
+        title: 'Блок 3. Сновидения и эмоциональное состояние',
+        max: 12,
+        hint: 'Этот раздел отражает связь сна с напряжением, тревогой и эмоциональным истощением.',
+        questions: [
+          { text: 'Как часто вам снятся тревожные или неприятные сны?', labels: ['0 — никогда', '1 — менее 1 раза в неделю', '2 — 1–2 раза в неделю', '3 — более 3 раз в неделю'] },
+          { text: 'Как часто ваши сны связаны с работой, стрессом или профессиональными неудачами?', labels: ['0 — никогда', '1 — редко', '2 — часто', '3 — почти всегда'] },
+          { text: 'Просыпаетесь ли вы после снов с сильным напряжением или тревогой?', labels: ['0 — никогда', '1 — иногда', '2 — часто', '3 — очень часто'] },
+          { text: 'Чувствуете ли вы эмоциональное истощение по утрам после тяжёлых снов?', labels: ['0 — никогда', '1 — иногда', '2 — часто', '3 — всегда'] }
+        ]
+      },
+      {
+        id: 'block4',
+        title: 'Блок 4. Физиология и парасомнии',
+        max: 12,
+        hint: 'Этот раздел отражает телесные проявления во сне и при пробуждении.',
+        questions: [
+          { text: 'Просыпались ли вы с учащённым сердцебиением?', labels: ['0 — никогда', '1 — редко', '2 — часто', '3 — очень часто'] },
+          { text: 'Были ли пробуждения от ощущения нехватки воздуха, пота или холода?', labels: ['0 — никогда', '1 — редко', '2 — часто', '3 — очень часто'] },
+          { text: 'Наблюдаются ли движения конечностей во сне (подёргивания, удары)?', labels: ['0 — никогда', '1 — редко', '2 — часто', '3 — очень часто'] },
+          { text: 'Испытываете ли вы утреннюю «сонную инерцию» (долго не можете проснуться)?', labels: ['0 — никогда', '1 — редко', '2 — часто', '3 — всегда'] }
+        ]
+      }
+    ];
+
+    const norms = {
+      block1: {
+        label: 'Качество сна',
+        severity: (score) => score <= 4 ? 'good' : score <= 9 ? 'warn' : 'bad',
+        rangeText: (score) => score <= 4 ? 'хорошо' : score <= 9 ? 'настороженность' : 'плохо',
+        text: (score) => score <= 4
+          ? 'Сон по этому блоку выглядит благополучным: выраженных трудностей с засыпанием, длительностью сна или ночными пробуждениями не видно.'
+          : score <= 9
+            ? 'Есть признаки снижения качества сна. Это может проявляться более долгим засыпанием, нестабильным режимом, ночными пробуждениями или дневной усталостью.'
+            : 'Выражены нарушения качества сна. Такой результат чаще сопровождается недостаточным восстановлением, коротким или фрагментированным сном и заметным влиянием на самочувствие днём.'
+      },
+      block2: {
+        label: 'Дневная сонливость',
+        severity: (score) => score <= 10 ? 'good' : score <= 15 ? 'warn' : 'bad',
+        rangeText: (score) => score <= 10 ? 'хорошо' : score <= 15 ? 'плохо' : 'очень плохо',
+        text: (score) => score <= 10
+          ? 'Выраженной дневной сонливости не выявлено. Вероятность непроизвольного засыпания в обычных ситуациях невысока.'
+          : score <= 15
+            ? 'Есть умеренно выраженная дневная сонливость. Она может мешать учёбе, работе, концентрации и снижать общую бодрость.'
+            : 'Есть выраженная дневная сонливость. При таком результате возрастает риск дремоты в потенциально неподходящих или опасных ситуациях.'
+      },
+      block3: {
+        label: 'Сновидения и эмоциональное состояние',
+        severity: (score) => score <= 3 ? 'good' : score <= 7 ? 'warn' : 'bad',
+        rangeText: (score) => score <= 3 ? 'хорошо' : score <= 7 ? 'плохо' : 'очень плохо',
+        text: (score) => score <= 3
+          ? 'Сновидения и эмоциональный фон после сна в целом спокойные. Признаки эмоционального истощения по утрам не выражены.'
+          : score <= 7
+            ? 'Есть связь сна с эмоциональным напряжением. Возможны неприятные сны, утренняя тревога или ощущение неполного восстановления.'
+            : 'Сон существенно связан с эмоциональным напряжением. Частые тревожные сны и утреннее истощение могут указывать на перегрузку и потребность в восстановлении.'
+      },
+      block4: {
+        label: 'Физиология и парасомнии',
+        severity: (score) => score <= 3 ? 'good' : score <= 7 ? 'warn' : 'bad',
+        rangeText: (score) => score <= 3 ? 'хорошо' : score <= 7 ? 'плохо' : 'очень плохо',
+        text: (score) => score <= 3
+          ? 'Телесные проявления во сне и при пробуждении выражены минимально или отсутствуют.'
+          : score <= 7
+            ? 'Есть отдельные физиологические проявления: сердцебиение, неприятные пробуждения, подёргивания или тяжёлое утреннее включение.'
+            : 'Есть выраженные физиологические сигналы сна. Такой результат требует более внимательного отношения к ночным симптомам и самочувствию утром.'
+      }
+    };
+
+    const questionnaireContainer = document.getElementById('questionnaire');
+    const progressBadge = document.getElementById('progressBadge');
+    const totalScoreEl = document.getElementById('totalScore');
+    const overallPill = document.getElementById('overallPill');
+    const overallText = document.getElementById('overallText');
+    const signalChips = document.getElementById('signalChips');
+    const blockResults = document.getElementById('blockResults');
+    const recommendations = document.getElementById('recommendations');
+    const scoreCircle = document.getElementById('scoreCircle');
+    const ageInput = document.getElementById('age');
+    const birthDateInput = document.getElementById('birthDate');
+    const fioInput = document.getElementById('fio');
+    const commentInput = document.getElementById('comment');
+    const pdfReport = document.getElementById('pdfReport');
+
+    function renderQuestionnaire() {
+      questionnaireContainer.innerHTML = questionnaireData.map((block, blockIndex) => `
+        <section class="block-card">
+          <div class="block-title-row">
+            <div class="block-title">${block.title}</div>
+            <div class="badge">Максимум: ${block.max} баллов</div>
+          </div>
+          <div class="block-note">${block.hint}</div>
+          ${block.questions.map((q, qIndex) => `
+            <div class="question">
+              <div class="question-title">${blockIndex + 1}.${qIndex + 1}. ${q.text}</div>
+              <div class="options">
+                ${q.labels.map((label, optionValue) => `
+                  <label class="option">
+                    <input type="radio" name="${block.id}_q${qIndex}" value="${optionValue}" />
+                    <span class="option-card">
+                      <span class="option-score">${optionValue}</span>
+                      <span class="option-text">${label}</span>
+                    </span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </section>
+      `).join('');
+    }
+
+    function getResponses() {
+      const values = {};
+      questionnaireData.forEach((block) => {
+        values[block.id] = block.questions.map((_, i) => {
+          const checked = document.querySelector(`input[name="${block.id}_q${i}"]:checked`);
+          return checked ? Number(checked.value) : null;
+        });
+      });
+      return values;
+    }
+
+    function sum(arr) {
+      return arr.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    }
+
+    function calculateAge(dateString) {
+      if (!dateString) {
+        ageInput.value = '';
+        return '';
+      }
+      const birth = new Date(dateString);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      ageInput.value = Number.isFinite(age) && age >= 0 ? `${age} лет` : '';
+      return ageInput.value;
+    }
+
+    function classifyOverall(scores, severities) {
+      const outOfNorm = severities.filter(s => s !== 'good').length;
+      const badCount = severities.filter(s => s === 'bad').length;
+      const total = Object.values(scores).reduce((a, b) => a + b, 0);
+
+      if (outOfNorm === 0) {
+        return {
+          pill: 'Хороший профиль',
+          className: 'status-good',
+          profile: 'good',
+          text: 'На данный момент выраженных проблем по тесту не видно: сон, дневная бодрость, эмоциональный фон после сна и телесные ночные проявления находятся в благоприятных пределах.'
+        };
+      }
+
+      if (outOfNorm === 1 && badCount === 0 && total < 28) {
+        return {
+          pill: 'Пограничный профиль',
+          className: 'status-warn',
+          profile: 'borderline',
+          text: 'Есть одна зона внимания. Это ещё не выглядит как выраженное системное нарушение, но уже указывает на потребность в коррекции режима и наблюдении за самочувствием.'
+        };
+      }
+
+      return {
+        pill: 'Неблагоприятный профиль',
+        className: 'status-bad',
+        profile: 'poor',
+        text: 'Результат указывает на нарушения сразу в нескольких зонах или на выраженность одной из них. Желательно не игнорировать такой профиль и заняться восстановлением сна и режима.'
+      };
+    }
+
+    function getSignalChips(scores, severities) {
+      const chips = [];
+      if (severities[0] !== 'good') chips.push('есть трудности с качеством сна');
+      if (severities[1] !== 'good') chips.push('есть дневная сонливость');
+      if (severities[2] !== 'good') chips.push('сон связан с эмоциональным напряжением');
+      if (severities[3] !== 'good') chips.push('есть физиологические ночные проявления');
+      if (!chips.length) chips.push('явных проблем по блокам не выявлено');
+      return chips;
+    }
+
+    function getRecommendations(blockScores, severities, total) {
+      const recs = [];
+
+      if (total <= 12) {
+        recs.push({ icon: '✓', text: 'Поддерживайте текущий режим сна: старайтесь ложиться и вставать примерно в одно и то же время, даже в выходные.' });
+      }
+
+      if (severities[0] !== 'good') {
+        recs.push({ icon: '1', text: 'Уделите внимание гигиене сна: уменьшите вечернюю нагрузку, сократите использование телефона и компьютера перед сном, избегайте кофеина и обильной еды поздно вечером.' });
+      }
+
+      if (blockScores.block1 >= 10) {
+        recs.push({ icon: '1', text: 'При стойких проблемах с засыпанием, частых пробуждениях или ощущении некачественного сна имеет смысл обсудить это со специалистом.' });
+      }
+
+      if (severities[1] !== 'good') {
+        recs.push({ icon: '2', text: 'Если вас клонит в сон днём, пересмотрите продолжительность ночного сна и постарайтесь не накапливать хроническое недосыпание.' });
+      }
+
+      if (blockScores.block2 >= 16) {
+        recs.push({ icon: '2', text: 'При выраженной сонливости важно соблюдать осторожность в дороге, за рулём и в других ситуациях, где дремота может быть опасна.' });
+      }
+
+      if (severities[2] !== 'good') {
+        recs.push({ icon: '3', text: 'Если сон сопровождается тревожными сновидениями и утренним эмоциональным истощением, полезно снизить уровень стресса, перераспределить нагрузку и уделить внимание восстановлению.' });
+      }
+
+      if (blockScores.block3 >= 8) {
+        recs.push({ icon: '3', text: 'Если тяжёлые сны, утренняя тревога или ощущение эмоционального истощения повторяются часто, желательно обратиться за профессиональной консультацией.' });
+      }
+
+      if (severities[3] !== 'good') {
+        recs.push({ icon: '4', text: 'Обратите внимание на ночные телесные проявления: сердцебиение, нехватку воздуха, потливость, подёргивания и тяжёлое пробуждение.' });
+      }
+
+      if (blockScores.block4 >= 8) {
+        recs.push({ icon: '4', text: 'Если такие ночные симптомы выражены или повторяются регулярно, лучше обсудить их со специалистом, особенно если они сочетаются с плохим сном и дневной сонливостью.' });
+      }
+
+      if (total >= 28) {
+        recs.unshift({ icon: '!', text: 'Общий результат высокий. Это повод внимательнее отнестись к качеству сна и не откладывать коррекцию режима и обращение за помощью при сохранении жалоб.' });
+      }
+
+      if (!recs.length) {
+        recs.push({ icon: '✓', text: 'По тесту выраженных проблем не выявлено. Для сохранения результата продолжайте поддерживать регулярный режим сна и отдыха.' });
+      }
+
+      return recs;
+    }
+
+    function getState() {
+      const responses = getResponses();
+      const blockScores = {};
+      const severities = [];
+      let answered = 0;
+      let totalQuestions = 0;
+
+      questionnaireData.forEach(block => {
+        totalQuestions += block.questions.length;
+        answered += responses[block.id].filter(v => typeof v === 'number').length;
+        blockScores[block.id] = sum(responses[block.id]);
+        severities.push(norms[block.id].severity(blockScores[block.id]));
+      });
+
+      const totalScore = Object.values(blockScores).reduce((a, b) => a + b, 0);
+      const overall = classifyOverall(blockScores, severities);
+      const chips = getSignalChips(blockScores, severities);
+      const recs = getRecommendations(blockScores, severities, totalScore);
+
+      return { responses, blockScores, severities, answered, totalQuestions, totalScore, overall, chips, recs };
+    }
+
+    function updateResults() {
+      const state = getState();
+      progressBadge.textContent = `Заполнено: ${state.answered} / ${state.totalQuestions}`;
+      totalScoreEl.textContent = state.totalScore;
+
+      const degrees = Math.min((state.totalScore / 72) * 360, 360);
+      scoreCircle.style.background = `conic-gradient(var(--accent1) 0deg, var(--accent2) ${degrees}deg, rgba(255,255,255,0.10) ${degrees}deg 360deg)`;
+
+      overallPill.className = `status-pill ${state.overall.className}`;
+      overallPill.textContent = state.overall.pill;
+      overallText.textContent = state.answered < state.totalQuestions
+        ? `Тест заполнен не полностью. Промежуточно: ${state.overall.text}`
+        : state.overall.text;
+
+      signalChips.innerHTML = state.chips.map(ch => `<div class="chip">${ch}</div>`).join('');
+
+      blockResults.innerHTML = questionnaireData.map(block => {
+        const score = state.blockScores[block.id];
+        const sev = norms[block.id].severity(score);
+        const max = block.max;
+        const pct = (score / max) * 100;
+        const sevLabel = norms[block.id].rangeText(score);
+        return `
+          <div class="block-result">
+            <div class="row-flex">
+              <div class="name">${norms[block.id].label}</div>
+              <div class="score">${score} / ${max} • ${sevLabel}</div>
+            </div>
+            <div class="legend"><span>0</span><span>${Math.round(max / 2)}</span><span>${max}</span></div>
+            <div class="meter"><div class="meter-fill" style="width:${pct}%"></div></div>
+            <div class="micro">${norms[block.id].text(score)}</div>
+          </div>
+        `;
+      }).join('');
+
+      recommendations.innerHTML = state.recs.map(rec => `
+        <div class="rec-item">
+          <div class="rec-icon">${rec.icon}</div>
+          <div class="rec-text">${rec.text}</div>
+        </div>
+      `).join('');
+    }
+
+    function buildPdfHtml() {
+      const state = getState();
+      const age = calculateAge(birthDateInput.value);
+      const today = new Date();
+      const dateText = today.toLocaleDateString('ru-RU');
+
+      pdfReport.innerHTML = `
+        <h1 class="pdf-page-title">Результат теста SOMBURNO</h1>
+        <p class="pdf-subtitle">Автоматически сформированный отчёт по результатам прохождения опросника.</p>
+
+        <div class="pdf-meta">
+          <div><strong>ФИО:</strong> ${fioInput.value || 'не указано'}</div>
+          <div><strong>Дата отчёта:</strong> ${dateText}</div>
+          <div><strong>Дата рождения:</strong> ${birthDateInput.value || 'не указана'}</div>
+          <div><strong>Возраст:</strong> ${age || 'не указан'}</div>
+          <div style="grid-column: 1 / -1;"><strong>Комментарий:</strong> ${commentInput.value || '—'}</div>
+        </div>
+
+        <div class="pdf-box">
+          <h4>Общий итог</h4>
+          <div><strong>Общий балл:</strong> ${state.totalScore} из 72</div>
+          <div><strong>Профиль:</strong> ${state.overall.pill}</div>
+          <div style="margin-top:8px; line-height:1.6; font-size:13px;">${state.overall.text}</div>
+        </div>
+
+        <div class="pdf-box">
+          <h4>Показатели по блокам</h4>
+          <div class="pdf-block-grid">
+            <div class="pdf-block-item"><strong>Качество сна:</strong> ${state.blockScores.block1} / 24 — ${norms.block1.rangeText(state.blockScores.block1)}<br>${norms.block1.text(state.blockScores.block1)}</div>
+            <div class="pdf-block-item"><strong>Дневная сонливость:</strong> ${state.blockScores.block2} / 24 — ${norms.block2.rangeText(state.blockScores.block2)}<br>${norms.block2.text(state.blockScores.block2)}</div>
+            <div class="pdf-block-item"><strong>Сновидения и эмоциональное состояние:</strong> ${state.blockScores.block3} / 12 — ${norms.block3.rangeText(state.blockScores.block3)}<br>${norms.block3.text(state.blockScores.block3)}</div>
+            <div class="pdf-block-item"><strong>Физиология и парасомнии:</strong> ${state.blockScores.block4} / 12 — ${norms.block4.rangeText(state.blockScores.block4)}<br>${norms.block4.text(state.blockScores.block4)}</div>
+          </div>
+        </div>
+
+        <div class="pdf-box">
+          <h4>Краткие выводы</h4>
+          <ul class="pdf-list">
+            ${state.chips.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="pdf-box">
+          <h4>Рекомендации</h4>
+          <ul class="pdf-list">
+            ${state.recs.map(item => `<li>${item.text}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    async function exportPdf() {
+      buildPdfHtml();
+
+      const { jsPDF } = window.jspdf || {};
+      if (!window.html2canvas || !jsPDF) {
+        alert('Не удалось загрузить модуль PDF. Проверьте подключение к интернету и повторите попытку.');
+        return;
+      }
+
+      const originalStyle = pdfReport.style.cssText;
+      pdfReport.style.position = 'absolute';
+      pdfReport.style.left = '0';
+      pdfReport.style.top = '0';
+      pdfReport.style.zIndex = '-1';
+
+      const canvas = await html2canvas(pdfReport, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      pdfReport.style.cssText = originalStyle;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const safeName = (fioInput.value || 'результат_SOMBURNO')
+        .replace(/[^a-zA-Zа-яА-Я0-9_-]+/g, '_')
+        .slice(0, 60);
+      pdf.save(`${safeName}.pdf`);
+    }
+
+    function resetForm() {
+      document.querySelectorAll('input[type="radio"]').forEach(input => input.checked = false);
+      fioInput.value = '';
+      birthDateInput.value = '';
+      ageInput.value = '';
+      commentInput.value = '';
+      updateResults();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    renderQuestionnaire();
+    updateResults();
+
+    document.addEventListener('change', (event) => {
+      if (event.target.matches('input[type="radio"]')) updateResults();
+      if (event.target === birthDateInput) {
+        calculateAge(birthDateInput.value);
+        updateResults();
+      }
+    });
+
+    birthDateInput.addEventListener('input', () => {
+      calculateAge(birthDateInput.value);
+      updateResults();
+    });
+
+    fioInput.addEventListener('input', updateResults);
+    commentInput.addEventListener('input', updateResults);
+
+    document.getElementById('pdfBtn').addEventListener('click', exportPdf);
+    document.getElementById('resetBtn').addEventListener('click', resetForm);
+  </script>
+</body>
+</html>
